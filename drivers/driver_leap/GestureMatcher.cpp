@@ -1,4 +1,5 @@
 
+#include "pch.h"
 #include "GestureMatcher.h"
 
 const Vector GestureMatcher::RightVector = Vector(-1,  0,  0);
@@ -144,10 +145,17 @@ bool GestureMatcher::MatchGestures(const Frame &frame, WhichHand which, float(&r
             pinkyside = direction.cross(palmNormal);
         merge(result[Thumbpress], maprange(pinkyside.dot(fingerdir[Finger::TYPE_THUMB]), 0.0f, 0.6f));
 
+        // Point gesture: point with index finger
+        merge(result[Point], std::min(maprange(sumbend[Finger::TYPE_INDEX], 50.0, 40.0),
+                                   maprange((sumbend[Finger::TYPE_THUMB] + sumbend[Finger::TYPE_MIDDLE] + sumbend[Finger::TYPE_PINKY] + sumbend[Finger::TYPE_RING]) / 4, 120.0, 150.0)));
 
-        // *UNRELIABLE* ILY gesture means pinky and index finger extended, middle and ring finger curled up
+        // Gun gesture: point with index finger and thumb out
+        merge(result[Gun], std::min(maprange((sumbend[Finger::TYPE_THUMB] + sumbend[Finger::TYPE_INDEX]) / 2, 50.0, 40.0),
+                                   maprange((sumbend[Finger::TYPE_THUMB] + sumbend[Finger::TYPE_MIDDLE] + sumbend[Finger::TYPE_PINKY] + sumbend[Finger::TYPE_RING]) / 4, 120.0, 150.0)));
+
+        // *UNRELIABLE* RockOut gesture means pinky and index finger extended, middle and ring finger curled up
         // Thumb doesn't matter. It's easier to point it inwards for many people.
-        merge(result[ILY], std::min(maprange((sumbend[Finger::TYPE_PINKY] + sumbend[Finger::TYPE_INDEX]) / 2, 50.0, 40.0),
+        merge(result[RockOut], std::min(maprange((sumbend[Finger::TYPE_PINKY] + sumbend[Finger::TYPE_INDEX]) / 2, 50.0, 40.0),
                                maprange((sumbend[Finger::TYPE_MIDDLE] + sumbend[Finger::TYPE_RING]) / 2, 120.0, 150.0)));
 
         // *UNRELIABLE* Flipping the Bird: You know how to flip a bird.
@@ -162,17 +170,15 @@ bool GestureMatcher::MatchGestures(const Frame &frame, WhichHand which, float(&r
 
         // FlatHand gestures
         float flatHand = maprange((sumbend[Finger::TYPE_THUMB] + sumbend[Finger::TYPE_INDEX] + sumbend[Finger::TYPE_MIDDLE] + sumbend[Finger::TYPE_RING] + sumbend[Finger::TYPE_PINKY]) / 5, 50.0, 40.0);
-        merge(result[FlatHandPalmUp]     , std::min(flatHand, maprange(( up).dot(palmNormal), 0.8f, 0.95f)));
-        merge(result[FlatHandPalmDown]   , std::min(flatHand, maprange((-up).dot(palmNormal), 0.8f, 0.95f)));
-        merge(result[FlatHandPalmAway]   , std::min(flatHand, maprange(( in).dot(palmNormal), 0.8f, 0.95f)));
-        merge(result[FlatHandPalmTowards], std::min(flatHand, maprange((-in).dot(palmNormal), 0.8f, 0.95f)));
+		float spread = std::min(fingerdir[Finger::TYPE_THUMB].angleTo(fingerdir[Finger::TYPE_INDEX]),
+								fingerdir[Finger::TYPE_INDEX].angleTo(fingerdir[Finger::TYPE_MIDDLE]));
+        merge(result[SpreadHand], std::min(flatHand, maprange(57.2957795f * spread, 10.0, 20.0) ));
 
         // ThumbsUp/Inward gestures
         Vector inward = hand.isLeft() ? right : -right;
         float fistHand = maprange((sumbend[Finger::TYPE_INDEX] + sumbend[Finger::TYPE_MIDDLE] + sumbend[Finger::TYPE_RING] + sumbend[Finger::TYPE_PINKY]) / 5, 120.0, 150.0);
         float straightThumb = maprange(sumbend[Finger::TYPE_THUMB], 50.0, 40.0);
-        merge(result[ThumbUp]     , std::min(fistHand, std::min(straightThumb, maprange((    up).dot(fingerdir[Finger::TYPE_THUMB]), 0.8f, 0.95f))));
-        merge(result[ThumbInward] , std::min(fistHand, std::min(straightThumb, maprange((inward).dot(fingerdir[Finger::TYPE_THUMB]), 0.8f, 0.95f))));
+        merge(result[ThumbUp], std::min(fistHand, straightThumb));
 
         if (otherhand.isValid()) // two handed gestures really need two hands
         {
@@ -184,6 +190,7 @@ bool GestureMatcher::MatchGestures(const Frame &frame, WhichHand which, float(&r
                                              maprange(fingertip[Leap::Finger::TYPE_INDEX].distanceTo(otherhand.palmPosition()), 80.0f, 60.0f) )
                                    ));
 
+#if 0
             // Touchpad emulation
             Finger otherIndex = otherhand.fingers().fingerType(Leap::Finger::TYPE_INDEX)[0];
             if (otherIndex.isFinger() && otherIndex.isValid())
@@ -243,6 +250,7 @@ bool GestureMatcher::MatchGestures(const Frame &frame, WhichHand which, float(&r
                     }
                 }
             }
+#endif
         }
 
 #if 0

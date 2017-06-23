@@ -33,13 +33,12 @@ public:
 
         // Hand gestures (these would significantly change the orientation of your hand)
         FlippingTheBird,         // flip someone off with your middle finger
-        ILY,                     // pinky and index finger extended, middle and ring bent
+		Point,					 // index finger exended, all other fingers bent
+        RockOut,                     // pinky and index finger extended, middle and ring bent
         Victory,                 // V shape with your index, middle fingers, other fingers curled
-        FlatHandPalmUp,          // flat hand, palm points upwards (relative to alignment of Leap!)
-        FlatHandPalmDown,        // flat hand, palm points downwards (relative to alignment of Leap!)
-        FlatHandPalmAway,        // flat hand, palm points away from self (relative to alignment of Leap!)
-        FlatHandPalmTowards,     // flat hand, palm points towards self (relative to alignment of Leap!)
+        SpreadHand,              // flat hand, fingers spread
         ThumbUp,                 // thumb points up, remaining fingers form a fist
+		Gun,					 // index finger and thumb exended, all other fingers bent
         ThumbInward,             // thumb points towards the left for the right hand and vice versa
 
         TODO_LiveLongAndProsper, // Spock's trademark greeting
@@ -80,15 +79,13 @@ public:
         case LowerFist: return "LowerFist"; break;
         case Pinch: return "Pinch"; break;
         case Thumbpress: return "Thumbpress"; break;
-        case ILY: return "ILY"; break;
+        case Point: return "Point"; break;
+        case RockOut: return "RockOut"; break;
         case FlippingTheBird: return "FlippingTheBird"; break;
         case Victory: return "Victory"; break;
-        case FlatHandPalmUp: return "FlatHandPalmUp"; break;
-        case FlatHandPalmDown: return "FlatHandPalmDown"; break;
-        case FlatHandPalmAway: return "FlatHandPalmAway"; break;
-        case FlatHandPalmTowards: return "FlatHandPalmTowards"; break;
+        case SpreadHand: return "SpreadHand"; break;
         case ThumbUp: return "ThumbUp"; break;
-        case ThumbInward: return "ThumbInward"; break;
+        case Gun: return "Gun"; break;
         case Timeout: return "Timeout"; break;
         case TouchpadAxisX: return "TouchpadAxisX"; break;
         case TouchpadAxisY: return "TouchpadAxisY"; break;
@@ -106,15 +103,13 @@ public:
         else if (name.compare("LowerFist") == 0) return LowerFist;
         else if (name.compare("Pinch") == 0) return Pinch;
         else if (name.compare("Thumbpress") == 0) return Thumbpress;
-        else if (name.compare("ILY") == 0) return ILY;
+        else if (name.compare("Point") == 0) return Point;
+        else if (name.compare("RockOut") == 0) return RockOut;
         else if (name.compare("FlippingTheBird") == 0) return FlippingTheBird;
         else if (name.compare("Victory") == 0) return Victory;
-        else if (name.compare("FlatHandPalmUp") == 0) return FlatHandPalmUp;
-        else if (name.compare("FlatHandPalmDown") == 0) return FlatHandPalmDown;
-        else if (name.compare("FlatHandPalmAway") == 0) return FlatHandPalmAway;
-        else if (name.compare("FlatHandPalmTowards") == 0) return FlatHandPalmTowards;
+        else if (name.compare("SpreadHand") == 0) return SpreadHand;
         else if (name.compare("ThumbUp") == 0) return ThumbUp;
-        else if (name.compare("ThumbInward") == 0) return ThumbInward;
+        else if (name.compare("Gun") == 0) return Gun;
         else if (name.compare("Timeout") == 0) return Timeout;
         else if (name.compare("TouchpadAxisX") == 0) return TouchpadAxisX;
         else if (name.compare("TouchpadAxisY") == 0) return TouchpadAxisY;

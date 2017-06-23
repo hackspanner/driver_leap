@@ -650,8 +650,9 @@ CLeapHmdLatest::CLeapHmdLatest( vr::IServerDriverHost * pDriverHost, int base, i
     settings_->GetString("leap", (m_nId ==  LEFT_CONTROLLER) ? "renderModel_lefthand" : (m_nId == RIGHT_CONTROLLER) ? "renderModel_righthand" : "renderModel", tmp_, sizeof(tmp_), "vr_controller_vive_1_5");
     m_strRenderModel = tmp_;
 
-    // set the 
-    m_gripAngleOffset = settings_->GetFloat("leap", (m_nId == LEFT_CONTROLLER) ? "gripAngleOffset_lefthand" : (m_nId == RIGHT_CONTROLLER) ? "gripAngleOffset_righthand" : "gripAngleOffset", 0.0);
+    // set grip angle offset (gun hold angle)
+    //m_gripAngleOffset = settings_->GetFloat("leap", (m_nId == LEFT_CONTROLLER) ? "gripAngleOffset_lefthand" : (m_nId == RIGHT_CONTROLLER) ? "gripAngleOffset_righthand" : "gripAngleOffset", 0.0);
+    m_gripAngleOffset = 45.0f;
 }
 
 CLeapHmdLatest::~CLeapHmdLatest()
@@ -906,50 +907,64 @@ void CLeapHmdLatest::UpdateControllerState(Frame &frame)
     float scores[GestureMatcher::NUM_GESTURES];
     handFound = matcher.MatchGestures(frame, which, scores);
 
-    if (handFound)
-    {
-        // Changing unPacketNum tells anyone polling state that something might have
-        // changed.  We don't try to be precise about that here.
-        NewState.unPacketNum = m_ControllerState.unPacketNum + 1;
+	if (handFound)
+	{
+		// Changing unPacketNum tells anyone polling state that something might have
+		// changed.  We don't try to be precise about that here.
+		NewState.unPacketNum = m_ControllerState.unPacketNum + 1;
 
-        // system menu mapping (timeout gesture)
-        if (scores[GestureMatcher::Timeout] >= 0.5f)
-            NewState.ulButtonTouched |= vr::ButtonMaskFromId(vr::k_EButton_System);
-        if (scores[GestureMatcher::Timeout] >= 0.5f)
-            NewState.ulButtonPressed |= vr::ButtonMaskFromId(vr::k_EButton_System);
+		// app menu mapping (timeout gesture)
+		if (scores[GestureMatcher::Timeout] >= 0.5f)
+		{
+			NewState.ulButtonTouched |= vr::ButtonMaskFromId(vr::k_EButton_ApplicationMenu);
+			NewState.ulButtonPressed |= vr::ButtonMaskFromId(vr::k_EButton_ApplicationMenu);
+		}
 
-        // application menu mapping (Flat hand towards your face gesture)
-        if (scores[GestureMatcher::FlatHandPalmTowards] >= 0.8f)
-            NewState.ulButtonTouched |= vr::ButtonMaskFromId(vr::k_EButton_ApplicationMenu);
-        if (scores[GestureMatcher::FlatHandPalmTowards] >= 0.8f)
-            NewState.ulButtonPressed |= vr::ButtonMaskFromId(vr::k_EButton_ApplicationMenu);
+		// digital trigger mapping (fist clenching gesture)
+		if (scores[GestureMatcher::LowerFist] > 0.2f)
+		{
+			NewState.ulButtonTouched |= vr::ButtonMaskFromId(vr::k_EButton_SteamVR_Trigger);
+			NewState.ulButtonPressed |= vr::ButtonMaskFromId(vr::k_EButton_SteamVR_Trigger);
+		}
 
-        // digital trigger mapping (fist clenching gesture)
-        if (scores[GestureMatcher::TriggerFinger] > 0.5f)
-            NewState.ulButtonTouched |= vr::ButtonMaskFromId(vr::k_EButton_SteamVR_Trigger);
-        if (scores[GestureMatcher::TriggerFinger] > 0.5f)
-            NewState.ulButtonPressed |= vr::ButtonMaskFromId(vr::k_EButton_SteamVR_Trigger);
+		// grip mapping (Spread hand)
+		if (scores[GestureMatcher::SpreadHand] >= 1.0f)
+		{
+			NewState.ulButtonTouched |= vr::ButtonMaskFromId(vr::k_EButton_Grip);
+			NewState.ulButtonPressed |= vr::ButtonMaskFromId(vr::k_EButton_Grip);
+		}
 
-        // grip mapping (clench fist with middle, index, pinky fingers)
-        if (scores[GestureMatcher::LowerFist] >= 0.5f)
-            NewState.ulButtonTouched |= vr::ButtonMaskFromId(vr::k_EButton_Grip);
-        if (scores[GestureMatcher::LowerFist] >= 0.5f)
-            NewState.ulButtonPressed |= vr::ButtonMaskFromId(vr::k_EButton_Grip);
+		// VRChat specific gestures, map to pentagon on touchpad
+		NewState.rAxis[0].x = 0;
+		NewState.rAxis[0].y = 0;
+		if (scores[GestureMatcher::Point] >= 0.9f)
+		{
+			NewState.rAxis[0].x = 0.0f;
+			NewState.rAxis[0].y = 1.0f;
+		}
+		else if (scores[GestureMatcher::ThumbUp] >= 0.9f)
+		{
+			NewState.rAxis[0].x = -0.95f;
+			NewState.rAxis[0].y = 0.31f;
+		}
+		else if (scores[GestureMatcher::Victory] >= 0.9f)
+		{
+			NewState.rAxis[0].x = 0.95f;
+			NewState.rAxis[0].y = 0.31f;
+		}
+		else if (scores[GestureMatcher::Gun] >= 0.9f)
+		{
+			NewState.rAxis[0].x = -0.59f;
+			NewState.rAxis[0].y = -0.81f;
+		}
+		else if (scores[GestureMatcher::RockOut] >= 0.9f)
+		{
+			NewState.rAxis[0].x = 0.59f;
+			NewState.rAxis[0].y = -0.81f;
+		}
 
-        // touchpad button press mapping (Thumbpress gesture)
-        if (scores[GestureMatcher::Thumbpress] >= 0.2f)
-            NewState.ulButtonTouched |= vr::ButtonMaskFromId(vr::k_EButton_SteamVR_Touchpad);
-        if (scores[GestureMatcher::Thumbpress] >= 1.0f)
-            NewState.ulButtonPressed |= vr::ButtonMaskFromId(vr::k_EButton_SteamVR_Touchpad);
-
-#if 0
-        // sixense driver seems to have good deadzone, but add a small one here
-        if (fabsf(cd.joystick_x) > 0.03f || fabsf(cd.joystick_y) > 0.03f)
-            NewState.ulButtonTouched |= vr::ButtonMaskFromId(vr::k_EButton_StreamVR_Touchpad);
-#endif
-
-        // All pressed buttons are touched
-        NewState.ulButtonTouched |= NewState.ulButtonPressed;
+        NewState.rAxis[1].x = scores[GestureMatcher::LowerFist];
+        NewState.rAxis[1].y = 0.0f;
 
         uint64_t ulChangedTouched = NewState.ulButtonTouched ^ m_ControllerState.ulButtonTouched;
         uint64_t ulChangedPressed = NewState.ulButtonPressed ^ m_ControllerState.ulButtonPressed;
@@ -959,15 +974,11 @@ void CLeapHmdLatest::UpdateControllerState(Frame &frame)
         SendButtonUpdates(&vr::IServerDriverHost::TrackedDeviceButtonUnpressed, ulChangedPressed & ~NewState.ulButtonPressed);
         SendButtonUpdates(&vr::IServerDriverHost::TrackedDeviceButtonUntouched, ulChangedTouched & ~NewState.ulButtonTouched);
 
-        NewState.rAxis[0].x = scores[GestureMatcher::TouchpadAxisX];
-        NewState.rAxis[0].y = scores[GestureMatcher::TouchpadAxisY];
-
-        NewState.rAxis[1].x = scores[GestureMatcher::TriggerFinger];
-        NewState.rAxis[1].y = 0.0f;
-
         // the touchpad maps to Axis 0 X/Y
+		/*
         if (NewState.rAxis[0].x != m_ControllerState.rAxis[0].x || NewState.rAxis[0].y != m_ControllerState.rAxis[0].y)
             m_pDriverHost->TrackedDeviceAxisUpdated(m_unSteamVRTrackedDeviceId, 0, NewState.rAxis[0]);
+		*/
 
         // trigger maps to Axis 1 X
         if (NewState.rAxis[1].x != m_ControllerState.rAxis[1].x)
@@ -1132,22 +1143,6 @@ void CLeapHmdLatest::UpdateTrackingState(Frame &frame)
             Vector normal = hand.palmNormal(); normal /= normal.magnitude();
             Vector side = direction.cross(normal);
 
-#if 0
-            // This code assumes palms are facing downwards.
-
-            // NOTE: y and z are swapped with respect to the Leap Motion's coordinate system and I list
-            //       the vectors in the order in which I expect them to be in the tracking camera's
-            //       coordinates system: X = sideways,
-            //                           Y = up/down i.e. palm's normal vector
-            //                           Z = front/back i.e. hand's pointing direction
-            m_Pose.qRotation = CalculateRotation(R);
-
-            float R[3][3] =
-            { { side.x,      side.z,      side.y },
-            { normal.x,    normal.z,    normal.y },
-            { direction.x, direction.z, direction.y } };
-
-#else
             // This code assumes palms are facing inwards as if you were holding controllers.
             // This is why the left hand and the
             // right hands have to use different matrices to compute their rotations.
@@ -1168,7 +1163,6 @@ void CLeapHmdLatest::UpdateTrackingState(Frame &frame)
             else if (m_nId == RIGHT_CONTROLLER)
                 m_Pose.qRotation = CalculateRotation(R);
 
-#endif
             // rotate by the specified grip angle (may be useful when using the Vive as a gun grip)
             if (m_gripAngleOffset != 0)
                 m_Pose.qRotation = rotate_around_axis(Vector(1.0, 0.0, 0.0), m_gripAngleOffset) * m_Pose.qRotation;
